@@ -1,0 +1,100 @@
+services:
+  frontendservice:
+    container_name: frontendservice
+    build:
+      context: ./frontend/.
+      dockerfile: Dockerfile
+    restart: on-failure
+
+    env_file: ./.env
+    expose:
+      - $FRONTEND_SERVICE_DOCKER_PORT
+    ports:
+      - $FRONTEND_SERVICE_LOCAL_PORT:$FRONTEND_SERVICE_DOCKER_PORT
+
+  backendservice:
+    container_name: backendservice
+    depends_on:
+      - backendservicedb
+      - pymodelservice
+    build:
+      context: ./api_project/.
+      dockerfile: Dockerfile
+    restart: on-failure
+
+    env_file: ./.env
+    expose:
+      - $BACKEND_SERVICE_SPRING_DOCKER_PORT
+    ports:
+      - $BACKEND_SERVICE_SPRING_LOCAL_PORT:$BACKEND_SERVICE_SPRING_DOCKER_PORT
+    # networks:
+    #   - commonnet
+    links:
+      - "pymodelservice"
+
+    environment:
+      SPRING_APPLICATION_JSON: '{
+        "spring.datasource.url": "jdbc:postgresql://backendservicedb:$BACKEND_SERVICE_POSTGRESDB_DOCKER_PORT/$BACKEND_SERVICE_POSTGRESDB_DATABASE",
+        "spring.datasource.username" : "postgres",
+        "spring.datasource.password" : "$BACKEND_SERVICE_POSTGRESDB_USER_PASSWORD",
+        "spring.jpa.properties.hibernate.dialect" : "org.hibernate.dialect.PostgreSQLDialect",
+        "spring.jpa.hibernate.ddl-auto" : "update"
+      }'
+
+    stdin_open: true
+    tty: true
+    # command: sh -c "/app/entrypoint.sh"
+
+  backendservicedb:
+    image: 'postgres:16.1-alpine3.18'
+    container_name: backendservicedb
+
+    env_file: ./.env
+    environment:
+      - POSTGRES_DB=$BACKEND_SERVICE_POSTGRESDB_DATABASE
+      - POSTGRES_USER=$BACKEND_SERVICE_POSTGRESDB_USER
+      - POSTGRES_PASSWORD=$BACKEND_SERVICE_POSTGRESDB_USER_PASSWORD
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    expose:
+      - $BACKEND_SERVICE_POSTGRESDB_DOCKER_PORT
+    ports:
+      - $BACKEND_SERVICE_POSTGRESDB_LOCAL_PORT:$BACKEND_SERVICE_POSTGRESDB_DOCKER_PORT
+    # networks:
+    #   - commonnet
+    volumes:
+      - ./api_project/src/main/resources/sql:/docker-entrypoint-initdb.d
+      - backend_service_postgres_data_volume:/var/lib/postgresql/data
+
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  pymodelservice:
+    container_name: pymodelservice
+    build:
+      context: ./py_model/.
+      dockerfile: Dockerfile
+    restart: on-failure
+
+    env_file: ./.env
+    expose:
+      - $PYMODEL_SERVICE_FASTAPI_DOCKER_PORT
+    ports:
+      - $PYMODEL_SERVICE_FASTAPI_LOCAL_PORT:$PYMODEL_SERVICE_FASTAPI_DOCKER_PORT
+    # networks:
+    #   - commonnet
+    # links:
+    #   - "backendservice"
+
+    stdin_open: true
+    tty: true
+
+volumes:
+  backend_service_postgres_data_volume:
+
+# networks:
+#   commonnet:

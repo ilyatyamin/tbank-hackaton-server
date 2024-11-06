@@ -1,0 +1,21 @@
+Index: api_project/src/main/java/org/example/api_project/services/S3Service.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package org.example.api_project.services;\n\nimport com.amazonaws.auth.AWSStaticCredentialsProvider;\nimport com.amazonaws.auth.BasicAWSCredentials;\nimport com.amazonaws.services.s3.AmazonS3;\nimport com.amazonaws.services.s3.AmazonS3ClientBuilder;\nimport com.amazonaws.services.s3.model.GetObjectRequest;\nimport com.amazonaws.services.s3.model.S3Object;\nimport com.amazonaws.util.IOUtils;\nimport org.example.api_project.dto.DownloadFileS3Response;\nimport org.example.api_project.dto.ResponseInfo;\nimport org.springframework.http.HttpStatus;\nimport org.springframework.stereotype.Service;\n\nimport java.io.IOException;\nimport java.nio.charset.StandardCharsets;\nimport java.util.Optional;\n\n@Service\npublic class S3Service {\n    public S3Service() {\n        BasicAWSCredentials credentials = new BasicAWSCredentials(ID, SECRET_KEY);\n        s3 = AmazonS3ClientBuilder.standard()\n                .withCredentials(new AWSStaticCredentialsProvider(credentials))\n                .withEndpointConfiguration(\n                        new AmazonS3ClientBuilder.EndpointConfiguration(\n                                \"storage.yandexcloud.net\", \"ru-central1\"\n                        )\n                )\n                .build();\n    }\n\n    public ResponseInfo<DownloadFileS3Response> downloadFile(String path) {\n        String[] buckets = path.split(\"/\");\n        if (buckets.length >= 4) {\n            String bucket = buckets[3];\n            String objectName = buckets[4];\n\n            S3Object object = s3.getObject(new GetObjectRequest(bucket, objectName));\n\n            byte[] targetArray;\n            try {\n                targetArray = IOUtils.toByteArray(object.getObjectContent());\n            } catch (IOException e) {\n                return new ResponseInfo<>(HttpStatus.INTERNAL_SERVER_ERROR,\n                        Optional.empty(),\n                        \"Error in processing message\");\n            }\n\n            String content = new String(targetArray, StandardCharsets.UTF_8);\n\n            return new ResponseInfo<>(HttpStatus.OK,\n                    Optional.of(new DownloadFileS3Response(content)),\n                    OK_MESSAGE);\n        } else {\n            return new ResponseInfo<>(HttpStatus.BAD_REQUEST,\n                    Optional.empty(),\n                    \"Invalid URL\");\n        }\n    }\n\n    private final static String ID = \"---\";\n    private final static String SECRET_KEY = \"---\";\n    private final static String OK_MESSAGE = \"OK\";\n\n    private final AmazonS3 s3;\n}\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/api_project/src/main/java/org/example/api_project/services/S3Service.java b/api_project/src/main/java/org/example/api_project/services/S3Service.java
+--- a/api_project/src/main/java/org/example/api_project/services/S3Service.java	(revision 47f4052d9bedcedd5ea7afb57b6a6cb37b5e361b)
++++ b/api_project/src/main/java/org/example/api_project/services/S3Service.java	(date 1730906165682)
+@@ -59,8 +59,8 @@
+         }
+     }
+ 
+-    private final static String ID = "---";
+-    private final static String SECRET_KEY = "---";
++    // private final static String ID = "---";
++    // private final static String SECRET_KEY = "---";
+     private final static String OK_MESSAGE = "OK";
+ 
+     private final AmazonS3 s3;
